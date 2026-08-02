@@ -20,6 +20,15 @@ interface TextModel {
   modelName: string;
   type: "text";
   think: boolean;
+  contextWindow?: number;
+  pricingUsdPerMillionTokens?: {
+    input: number;
+    output: number;
+    cache_read: number;
+    cache_write: number | null;
+  };
+  inputModalities?: string[];
+  thinking?: ("adaptive" | "disabled" | "always_on")[];
 }
 
 interface ImageModel {
@@ -57,6 +66,7 @@ interface VendorConfig {
   inputs: { key: string; label: string; type: "text" | "password" | "url"; required: boolean; placeholder?: string }[];
   inputValues: Record<string, string>;
   models: (TextModel | ImageModel | VideoModel | TTSModel)[];
+  metadata?: Record<string, unknown>;
 }
 
 type ReferenceList =
@@ -134,7 +144,7 @@ declare const exports: {
 
 const vendor: VendorConfig = {
   id: "minimax",
-  version: "2.1",
+  version: "2.2",
   author: "Toonflow",
   name: "MiniMax(海螺AI)",
   description: "MiniMax官方接口适配，支持M系列推理文本模型、文生图/图生图、视频生成（文生视频、图生视频、首尾帧生成）能力 \n [前往平台](https://minimaxi.com/)",
@@ -143,9 +153,225 @@ const vendor: VendorConfig = {
     { key: "baseUrl", label: "请求地址", type: "url", required: true, placeholder: "示例：https://api.minimaxi.com" },
   ],
   inputValues: { apiKey: "", baseUrl: "https://api.minimaxi.com" },
+  metadata: {
+    text_model_config: {
+      reason_codes: {
+        provider_add: "provider-add",
+        model_add: "model-add",
+        parameter_refresh: "parameter-refresh",
+        input_capability: "input-capability",
+      },
+      model_id: "MiniMax-M3",
+      model_ids: ["MiniMax-M3", "MiniMax-M2.7"],
+      models: [
+        {
+          model_id: "MiniMax-M3",
+          context_window: 1000000,
+          pricing_usd_per_million_tokens: {
+            input: 0.6,
+            output: 2.4,
+            cache_read: 0.12,
+            cache_write: null,
+          },
+          input_modalities: ["text", "image", "video"],
+          thinking: ["adaptive", "disabled"],
+        },
+        {
+          model_id: "MiniMax-M2.7",
+          context_window: 204800,
+          pricing_usd_per_million_tokens: {
+            input: 0.3,
+            output: 1.2,
+            cache_read: 0.06,
+            cache_write: 0.375,
+          },
+          input_modalities: ["text"],
+          thinking: ["always_on"],
+        },
+      ],
+      anthropic_base_url: "https://api.minimax.io/anthropic",
+      openai_base_url: "https://api.minimax.io/v1",
+      context_window: 1000000,
+      pricing_usd_per_million_tokens: {
+        input: 0.6,
+        output: 2.4,
+        cache_read: 0.12,
+        cache_write: null,
+      },
+      thinking: ["adaptive", "disabled"],
+    },
+    regional_endpoints: [
+      {
+        region: "global_en",
+        openai_base_url: "https://api.minimax.io/v1",
+        anthropic_base_url: "https://api.minimax.io/anthropic",
+        docs_root: "https://platform.minimax.io/docs",
+      },
+      {
+        region: "cn_zh",
+        openai_base_url: "https://api.minimaxi.com/v1",
+        anthropic_base_url: "https://api.minimaxi.com/anthropic",
+        docs_root: "https://platform.minimaxi.com/docs",
+      },
+    ],
+    multimodal_config: {
+      speech: {
+        reason_code: "tts-tool",
+        reason_codes: { tts: "tts-tool" },
+        docs_urls: [
+          "https://platform.minimax.io/docs/api-reference/speech-t2a-http",
+          "https://platform.minimax.io/docs/api-reference/speech-t2a-async-create",
+          "https://platform.minimax.io/docs/api-reference/speech-t2a-websocket",
+          "https://platform.minimaxi.com/docs/api-reference/speech-t2a-http",
+          "https://platform.minimaxi.com/docs/api-reference/speech-t2a-async-create",
+          "https://platform.minimaxi.com/docs/api-reference/speech-t2a-websocket",
+        ],
+        endpoints: [
+          { region: "global_en", url: "https://api.minimax.io/v1/t2a_v2" },
+          { region: "cn_zh", url: "https://api.minimaxi.com/v1/t2a_v2" },
+        ],
+        default_model: "speech-2.8-hd",
+        models: ["speech-2.8-hd", "speech-2.8-turbo", "speech-2.6-hd", "speech-2.6-turbo", "speech-02-hd", "speech-02-turbo", "speech-01-hd", "speech-01-turbo"],
+      },
+      voice_clone: {
+        reason_code: "voice-clone-tool",
+        reason_codes: { clone: "voice-clone-tool", design: "voice-design-tool" },
+        docs_urls: [
+          "https://platform.minimax.io/docs/api-reference/voice-cloning-clone",
+          "https://platform.minimax.io/docs/api-reference/voice-cloning-uploadcloneaudio",
+          "https://platform.minimax.io/docs/api-reference/voice-cloning-uploadprompt",
+          "https://platform.minimax.io/docs/api-reference/voice-design-design",
+          "https://platform.minimaxi.com/docs/api-reference/voice-cloning-clone",
+          "https://platform.minimaxi.com/docs/api-reference/voice-cloning-uploadcloneaudio",
+          "https://platform.minimaxi.com/docs/api-reference/voice-cloning-uploadprompt",
+          "https://platform.minimaxi.com/docs/api-reference/voice-design-design",
+        ],
+        endpoints: [
+          { region: "global_en", url: "https://api.minimax.io/v1/voice_clone" },
+          { region: "cn_zh", url: "https://api.minimaxi.com/v1/voice_clone" },
+        ],
+        models: ["speech-2.8-hd", "speech-2.6-hd", "speech-02-hd", "speech-01-hd"],
+      },
+      image: {
+        reason_code: "text-to-image-tool",
+        reason_codes: { text_to_image: "text-to-image-tool", image_to_image: "image-to-image-tool" },
+        docs_urls: [
+          "https://platform.minimax.io/docs/api-reference/image-generation-t2i",
+          "https://platform.minimax.io/docs/api-reference/image-generation-i2i",
+          "https://platform.minimaxi.com/docs/api-reference/image-generation-t2i",
+          "https://platform.minimaxi.com/docs/api-reference/image-generation-i2i",
+        ],
+        openapi_urls: [
+          "https://platform.minimax.io/docs/api-reference/image/generation/api/text-to-image.json",
+          "https://platform.minimax.io/docs/api-reference/image/generation/api/image-to-image.json",
+          "https://platform.minimaxi.com/docs/api-reference/image/generation/api/text-to-image.json",
+          "https://platform.minimaxi.com/docs/api-reference/image/generation/api/image-to-image.json",
+        ],
+        endpoints: [
+          { region: "global_en", url: "https://api.minimax.io/v1/image_generation" },
+          { region: "cn_zh", url: "https://api.minimaxi.com/v1/image_generation" },
+        ],
+        default_model: "image-01",
+        models: ["image-01", "image-01-live"],
+      },
+      video: {
+        reason_code: "text-to-video-tool",
+        reason_codes: { text_to_video: "text-to-video-tool", image_to_video: "image-to-video-tool" },
+        docs_urls: [
+          "https://platform.minimax.io/docs/api-reference/video-generation-v2-create",
+          "https://platform.minimax.io/docs/api-reference/video-generation-v2-query",
+          "https://platform.minimax.io/docs/api-reference/video-generation-v2-list",
+          "https://platform.minimax.io/docs/api-reference/video-generation-v2-delete",
+          "https://platform.minimaxi.com/docs/api-reference/video-generation-v2-create",
+          "https://platform.minimaxi.com/docs/api-reference/video-generation-v2-query",
+          "https://platform.minimaxi.com/docs/api-reference/video-generation-v2-list",
+          "https://platform.minimaxi.com/docs/api-reference/video-generation-v2-delete",
+        ],
+        endpoints: [
+          { region: "global_en", url: "https://api.minimax.io/v2/video_generation", api_version: "v2", models: ["MiniMax-H3"] },
+          { region: "cn_zh", url: "https://api.minimaxi.com/v2/video_generation", api_version: "v2", models: ["MiniMax-H3"] },
+        ],
+        default_model: "MiniMax-H3",
+        models: ["MiniMax-H3"],
+      },
+      video_agent: {
+        reason_code: "video-template-tool",
+        reason_codes: { template: "video-template-tool" },
+        deprecated: true,
+        docs_urls: [
+          "https://platform.minimax.io/docs/api-reference/video-agent-create",
+          "https://platform.minimax.io/docs/api-reference/video-agent-query",
+          "https://platform.minimaxi.com/docs/api-reference/video-agent-create",
+          "https://platform.minimaxi.com/docs/api-reference/video-agent-query",
+        ],
+        endpoints: [
+          { region: "global_en", url: "https://api.minimax.io/v1/video_template_generation" },
+          { region: "cn_zh", url: "https://api.minimaxi.com/v1/video_template_generation" },
+        ],
+      },
+      music: {
+        reason_code: "music-generation-tool",
+        reason_codes: { generation: "music-generation-tool", cover: "music-cover-tool" },
+        docs_urls: [
+          "https://platform.minimax.io/docs/api-reference/music-generation",
+          "https://platform.minimaxi.com/docs/api-reference/music-generation",
+        ],
+        openapi_urls: [
+          "https://platform.minimax.io/docs/api-reference/music/api/openapi.json",
+          "https://platform.minimaxi.com/docs/api-reference/music/api/openapi.json",
+        ],
+        endpoints: [
+          { region: "global_en", url: "https://api.minimax.io/v1/music_generation" },
+          { region: "cn_zh", url: "https://api.minimaxi.com/v1/music_generation" },
+        ],
+        default_model: "music-3.0",
+        models: {
+          generation: ["music-3.0", "music-2.6", "music-3.0-free", "music-2.6-free"],
+          cover: ["music-cover", "music-cover-free"],
+        },
+      },
+    },
+    official_docs: {
+      local_path: "${HOME}/src/minimax-docs",
+      web_root: "https://platform.minimax.io/docs/api-reference/api-overview",
+      web_roots: [
+        "https://platform.minimax.io/docs/api-reference/api-overview",
+        "https://platform.minimaxi.com/docs/api-reference/api-overview",
+      ],
+    },
+  },
   models: [
     // 文本模型
-    { name: "MiniMax-M2.7 (推理版)", modelName: "MiniMax-M2.7", type: "text", think: true },
+    {
+      name: "MiniMax-M3",
+      modelName: "MiniMax-M3",
+      type: "text",
+      think: true,
+      contextWindow: 1000000,
+      pricingUsdPerMillionTokens: {
+        input: 0.6,
+        output: 2.4,
+        cache_read: 0.12,
+        cache_write: null,
+      },
+      inputModalities: ["text", "image", "video"],
+      thinking: ["adaptive", "disabled"],
+    },
+    {
+      name: "MiniMax-M2.7 (推理版)",
+      modelName: "MiniMax-M2.7",
+      type: "text",
+      think: true,
+      contextWindow: 204800,
+      pricingUsdPerMillionTokens: {
+        input: 0.3,
+        output: 1.2,
+        cache_read: 0.06,
+        cache_write: 0.375,
+      },
+      inputModalities: ["text"],
+      thinking: ["always_on"],
+    },
     { name: "MiniMax-M2.7 极速版 (推理版)", modelName: "MiniMax-M2.7-highspeed", type: "text", think: true },
     { name: "MiniMax-M2.5 (推理版)", modelName: "MiniMax-M2.5", type: "text", think: true },
     { name: "MiniMax-M2.5 极速版 (推理版)", modelName: "MiniMax-M2.5-highspeed", type: "text", think: true },
